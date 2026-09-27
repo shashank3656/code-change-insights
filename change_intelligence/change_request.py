@@ -112,12 +112,19 @@ def endpoint_url(value):
 def submit(payload, api_url, secret):
     if not secret:
         raise Failure("Configure CHANGE_WEBHOOK_SECRET before submitting")
-    # SetuOps resolves an omitted environment from its service catalog.
-    identity = "\n".join((payload["repo"], payload["sha"], payload.get("environment", "")))
+    # Keep the artifact rich, but send only the current SetuOps webhook contract.
+    delivery = {key: payload[key] for key in (
+        "repo", "sha", "service", "title", "summary", "author", "pipeline_url",
+        "change_type", "watch_minutes",
+    )}
+    for key in ("sbom_url", "attestation_url", "image_digest"):
+        if payload.get(key):
+            delivery[key] = payload[key]
+    identity = "\n".join((payload["repo"], payload["sha"]))
     response = request_json("POST", endpoint_url(api_url), {
         "X-CI-Secret": secret,
         "Idempotency-Key": hashlib.sha256(identity.encode()).hexdigest(),
-    }, payload, attempts=1)
+    }, delivery, attempts=1)
     # No automatic POST retries: the current SetuOps implementation does not
     # promise atomic idempotency for concurrent inserts. Reruns are deliberate.
     if (response.get("status") != "ok" or type(response.get("id")) is not int or response["id"] <= 0 or

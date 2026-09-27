@@ -345,6 +345,10 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(result["change_number"], "CHG0000017")
         self.assertEqual(call.call_args.args[1], "https://setuops.example/api/webhooks/change")
         self.assertEqual(call.call_args.args[2]["X-CI-Secret"], "fake-secret")
+        self.assertEqual(set(call.call_args.args[3]), {
+            "repo", "sha", "service", "title", "summary", "author", "pipeline_url",
+            "change_type", "watch_minutes",
+        })
         self.assertEqual(call.call_args.kwargs["attempts"], 1)
 
     @patch("change_intelligence.change_request.request_json")

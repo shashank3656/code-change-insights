@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.5
+
+- Submit only fields from the current SetuOps CI webhook contract while retaining the complete AI assessment in workflow artifacts.
+
 ## 1.1.4
 
 - Align SetuOps submissions with the current webhook contract: standard changes and a 120-minute watch.
