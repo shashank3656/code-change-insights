@@ -20,7 +20,7 @@ application checkout in a fresh runner directory.
    this action and the checkout/artifact actions.
 2. Copy `examples/ingest-changes.yml` and `examples/create-change-request.yml` into
    the caller's `.github/workflows/` directory and commit them to its default branch.
-3. Configure `OPENAI_API_KEY`, `OPENAI_MODEL`, `CHANGE_WEBHOOK_SECRET`, and
+3. Configure `CURSOR_API_KEY`, `CURSOR_MODEL`, `CHANGE_WEBHOOK_SECRET`, and
    `SETUOPS_API_URL` in that caller. API keys belong in secrets. The model and API URL
    can be repository variables. Configure secrets only for the operations you use.
 4. Allow ingestion's `contents: write` and `pull-requests: read` token permissions.
@@ -98,8 +98,10 @@ retried. After a timeout, check SetuOps's records before rerunning.
 
 ## Evidence quality and data handling
 
-The AI receives code patches and commit titles as untrusted data, with no tools.
-Structured output and local validation require a consistent schema and reject
+The Cursor Agent CLI receives code patches and commit titles as untrusted data.
+It runs from an isolated temporary directory without the caller checkout, repository
+rules, user-level Cursor configuration, GitHub token, SetuOps secret, or inherited cloud credentials. Prompt instructions
+require JSON-only output, and local validation enforces a consistent schema and rejects
 references to files outside the supplied batch. This constrains output shape;
 risks still need human review.
 
@@ -111,14 +113,16 @@ low/medium/high, unknown is mapped to high with a prominent manual-review note.
 
 Common credential-file contents are excluded and obvious credentials are redacted
 on a best-effort basis. This is not a complete secret scanner. Code patches are
-sent to the selected OpenAI model. Responses requests use `store: false`; that
-setting is not a blanket promise of zero provider retention under all policies.
+sent through Cursor to the selected Cursor model. Provider storage and retention
+follow the Cursor account and service policies configured by the repository owner.
 Raw patches are not persisted by this toolkit. Summaries inherit the caller repo's
 access level and remain on its storage branch until explicitly managed by its owner.
 
 HTTP requests use bounded retries and timeouts, refuse redirects carrying
 credentials, and avoid printing remote response bodies or secrets in error logs.
-The request job needs no AI key; the ingestion job needs no SetuOps secret.
+The request job needs no Cursor key; the ingestion job needs no SetuOps secret.
+Ingestion downloads Cursor's official CLI installer at runtime and currently follows
+the CLI version served by that installer.
 
 ## Action inputs and outputs
 
@@ -145,5 +149,6 @@ Outputs:
 
 - https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
 - https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents
-- https://developers.openai.com/api/docs/guides/structured-outputs
-- https://developers.openai.com/api/docs/guides/migrate-to-responses
+- https://docs.cursor.com/en/cli/github-actions
+- https://docs.cursor.com/en/cli/reference/output-format
+- https://docs.cursor.com/en/cli/reference/parameters

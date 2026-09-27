@@ -29,8 +29,8 @@ def assessment(level="medium"):
 
 
 def response(value):
-    return {"status": "completed", "output": [{"type": "message", "content": [
-        {"type": "output_text", "text": json.dumps(value)}]}]}
+    return {"type": "result", "subtype": "success", "is_error": False,
+            "result": json.dumps(value)}
 
 
 class MemoryStore:
@@ -205,52 +205,85 @@ class ProviderTests(unittest.TestCase):
         self.evidence = {"title": "Update", "files": ["app.py"], "limitations": [],
                          "batches": [[{"file": "app.py", "patch": "+timeout = 30"}]]}
 
-    @patch("change_intelligence.analysis.request_json")
-    def test_responses_contract_and_risk_floor(self, call):
+    def cursor(self, value, returncode=0):
+        def run(command, **kwargs):
+            kwargs["stdout"].write(json.dumps(value).encode())
+            return Mock(returncode=returncode)
+        return run
+
+    @patch("change_intelligence.analysis.subprocess.run")
+    @patch("change_intelligence.analysis.shutil.which", return_value="/usr/bin/cursor-agent")
+    def test_cursor_contract_secret_isolation_and_risk_floor(self, which, run):
         value = assessment("high")
         value["risk_level"] = "low"
-        call.return_value = response(value)
-        result = Analyzer("fake-key", "test-model").analyze(self.evidence)
-        self.assertEqual(result["risk_level"], "high")
-        body = call.call_args.args[3]
-        self.assertFalse(body["store"])
-        self.assertTrue(body["text"]["format"]["strict"])
-        self.assertNotIn("tools", body)
-        self.assertIn("untrusted DATA", body["instructions"])
+        captured = {}
 
-    @patch("change_intelligence.analysis.request_json")
-    def test_incomplete_refused_invalid_and_hallucinated_output_fails(self, call):
+        def invoke(command, **kwargs):
+            captured.update(command=command, **kwargs)
+            kwargs["stdout"].write(json.dumps(response(value)).encode())
+            return Mock(returncode=0)
+
+        run.side_effect = invoke
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "github-secret",
+                                     "CHANGE_WEBHOOK_SECRET": "setuops-secret",
+                                     "AWS_SECRET_ACCESS_KEY": "cloud-secret"}):
+            result = Analyzer("cursor-secret", "test-model").analyze(self.evidence)
+        self.assertEqual(result["risk_level"], "high")
+        self.assertEqual(captured["command"], ["/usr/bin/cursor-agent", "--print",
+                                               "--output-format", "json", "--model", "test-model"])
+        self.assertIn("untrusted DATA", captured["input"].decode())
+        self.assertIn("+timeout = 30", captured["input"].decode())
+        self.assertEqual(captured["env"]["CURSOR_API_KEY"], "cursor-secret")
+        for secret in ("GITHUB_TOKEN", "CHANGE_WEBHOOK_SECRET", "AWS_SECRET_ACCESS_KEY"):
+            self.assertNotIn(secret, captured["env"])
+        self.assertTrue(Path(captured["cwd"]).name.startswith("cursor-change-analysis-"))
+        self.assertEqual(captured["env"]["HOME"], captured["cwd"])
+
+    @patch("change_intelligence.analysis.subprocess.run")
+    @patch("change_intelligence.analysis.shutil.which", return_value="/usr/bin/cursor-agent")
+    def test_unsuccessful_invalid_and_hallucinated_output_fails(self, which, run):
         invalid = assessment()
         invalid["risk_factors"][0]["files"] = ["invented.py"]
-        for value in ({"status": "incomplete"}, {"status": "completed", "output": [
-            {"content": [{"type": "refusal"}]}]}, response({"summary": "missing fields"}), response(invalid)):
+        for value in ({"type": "result", "subtype": "error", "is_error": True},
+                      response({"summary": "missing fields"}), response(invalid),
+                      response("not-json-object")):
             with self.subTest(value=value):
-                call.return_value = value
+                run.side_effect = self.cursor(value)
                 with self.assertRaises(Failure):
                     Analyzer("fake-key", "test-model").analyze(self.evidence)
 
-    @patch("change_intelligence.analysis.request_json")
-    def test_truncation_cannot_be_reported_as_low_risk(self, call):
+    @patch("change_intelligence.analysis.subprocess.run")
+    @patch("change_intelligence.analysis.shutil.which", return_value="/usr/bin/cursor-agent")
+    def test_truncation_cannot_be_reported_as_low_risk(self, which, run):
         self.evidence["limitations"] = ["Patch truncated: app.py"]
-        call.return_value = response(assessment("low"))
+        run.side_effect = self.cursor(response(assessment("low")))
         result = Analyzer("fake", "test-model").analyze(self.evidence)
         self.assertEqual(result["risk_level"], "unknown")
         self.assertIn("Patch truncated: app.py", result["limitations"])
 
-    @patch("change_intelligence.analysis.request_json")
-    def test_empty_commit_needs_no_remote_call(self, call):
+    @patch("change_intelligence.analysis.subprocess.run")
+    @patch("change_intelligence.analysis.shutil.which")
+    def test_empty_commit_needs_no_remote_call(self, which, run):
         self.evidence["batches"] = []
         result = Analyzer("fake", "test-model").analyze(self.evidence)
         self.assertEqual(result["risk_level"], "low")
-        call.assert_not_called()
+        which.assert_not_called()
+        run.assert_not_called()
 
-    @patch("change_intelligence.analysis.request_json")
-    def test_oversized_batch_aggregate_fails_before_completion(self, call):
+    @patch("change_intelligence.analysis.subprocess.run")
+    @patch("change_intelligence.analysis.shutil.which", return_value="/usr/bin/cursor-agent")
+    def test_oversized_batch_aggregate_fails_before_completion(self, which, run):
         self.evidence["batches"] *= 2
         value = assessment()
         value["summary"] = "x" * 7000
-        call.return_value = response(value)
+        run.side_effect = self.cursor(response(value))
         with self.assertRaisesRegex(Failure, "invalid value"):
+            Analyzer("fake", "test-model").analyze(self.evidence)
+
+    @patch("change_intelligence.analysis.subprocess.run", return_value=Mock(returncode=1))
+    @patch("change_intelligence.analysis.shutil.which", return_value="/usr/bin/cursor-agent")
+    def test_cursor_failure_is_safe(self, which, run):
+        with self.assertRaisesRegex(Failure, "verify CURSOR_API_KEY"):
             Analyzer("fake", "test-model").analyze(self.evidence)
 
 

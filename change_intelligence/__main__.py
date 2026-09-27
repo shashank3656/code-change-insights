@@ -57,7 +57,7 @@ def ingest(source, store, base, target, analyzer_factory=None):
             record.update({key: evidence[key] for key in ("title", "files")})
             record["pull_requests"] = store.pull_requests(sha)
             analyzer = analyzer_factory() if analyzer_factory else Analyzer(
-                required_env("OPENAI_API_KEY"), required_env("OPENAI_MODEL"))
+                required_env("CURSOR_API_KEY"), os.environ.get("CURSOR_MODEL", "composer-2.5").strip() or "composer-2.5")
             record["assessment"] = analyzer.analyze(evidence)
             record.update(status="completed", model=analyzer.model)
         except Failure as exc:

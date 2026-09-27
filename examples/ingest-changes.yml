@@ -40,8 +40,8 @@ jobs:
           operation: ingest
           base-sha: ${{ inputs.base_sha }}
           target-sha: ${{ inputs.target_sha }}
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          openai-model: ${{ vars.OPENAI_MODEL }}
+          cursor-api-key: ${{ secrets.CURSOR_API_KEY }}
+          cursor-model: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
       - name: Keep ingestion report
         if: always() && steps.insights.outputs.artifact-directory != ''
         uses: actions/upload-artifact@v4

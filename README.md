@@ -27,8 +27,8 @@ Configure these **Actions secrets and variables in each application repository**
 
 | Kind | Name | Purpose |
 | --- | --- | --- |
-| Secret | `OPENAI_API_KEY` | Generate new AI assessments |
-| Variable | `OPENAI_MODEL` | Your enabled model supporting Responses structured outputs |
+| Secret | `CURSOR_API_KEY` | Generate new AI assessments with Cursor Agent CLI |
+| Variable | `CURSOR_MODEL` | Cursor model ID; defaults to `composer-2.5` |
 | Secret | `CHANGE_WEBHOOK_SECRET` | Submit a Change Request to SetuOps |
 | Variable | `SETUOPS_API_URL` | SetuOps HTTPS origin or complete change webhook URL |
 
@@ -53,8 +53,8 @@ essential step, after checking out the application with `fetch-depth: 0`, is:
   id: insights
   with:
     operation: ingest
-    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-    openai-model: ${{ vars.OPENAI_MODEL }}
+    cursor-api-key: ${{ secrets.CURSOR_API_KEY }}
+    cursor-model: ${{ vars.CURSOR_MODEL || 'composer-2.5' }}
 ```
 
 The caller job needs `contents: write` and `pull-requests: read`. The default
@@ -104,7 +104,7 @@ preparation exposes `risk-level`.
 
 ## Versions and configuration
 
-`v1.0.0` identifies the initial release; `v1` is its major-version entry point.
+`v1.1.0` uses Cursor Agent CLI for analysis; `v1` is the current major-version entry point.
 Use a full commit SHA in `uses:` when you want immutable version pinning. The
 exact action version supplies both the metadata and Python code; callers do not
 need a separately pinned toolkit checkout.
@@ -112,8 +112,9 @@ need a separately pinned toolkit checkout.
 The examples assume `main`. For a different branch, change the trigger, job
 condition, checkout ref, and the action's `default-branch` input together.
 Use `source-directory` for applications checked out below the workspace root.
-Python 3.10+ and Git are required; Ubuntu GitHub-hosted runners are supported.
-There are no runtime Python dependencies.
+Python 3.10+, Git, and curl are required; Ubuntu GitHub-hosted runners are supported.
+The action installs Cursor Agent CLI from Cursor's official installer for ingestion.
+There are no runtime Python package dependencies.
 
 See [operating guide](docs/change-intelligence.md) for backfill, failure behavior,
 input/output details, data handling, and release review considerations.
@@ -125,6 +126,6 @@ input/output details, data handling, and release review considerations.
 python3 -m unittest discover -s tests -v
 ```
 
-Tests use temporary Git repositories and mocked API boundaries. CI also exercises
+Tests use temporary Git repositories and mocked Cursor/HTTP boundaries. CI also exercises
 the composite action on an empty release range, which must fail without calling
-OpenAI or SetuOps. No credentials for those services are needed to test the toolkit.
+Cursor or SetuOps. No credentials for those services are needed to test the toolkit.

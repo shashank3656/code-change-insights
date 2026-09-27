@@ -21,10 +21,11 @@ inputs:
     description: Full previous SHA; inferred from the push event for ingestion
   target-sha:
     description: Full target SHA; inferred from the push event for ingestion
-  openai-api-key:
-    description: Required for new ingestion assessments; not used for Change Requests
-  openai-model:
-    description: Model supporting Responses API structured outputs
+  cursor-api-key:
+    description: Cursor API key required for new ingestion assessments; not used for Change Requests
+  cursor-model:
+    description: Cursor CLI model ID
+    default: composer-2.5
   service:
     description: SetuOps service name; required for Change Requests
   environment:
@@ -65,6 +66,15 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Install Cursor Agent CLI
+      if: inputs.operation == 'ingest'
+      shell: bash
+      env:
+        CURSOR_INSTALLER: ${{ runner.temp }}/cursor-install.sh
+      run: |
+        curl https://cursor.com/install -fsS -o "$CURSOR_INSTALLER"
+        bash "$CURSOR_INSTALLER"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
     - name: Run Code Change Insights
       id: run
       shell: bash
@@ -77,8 +87,8 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         BASE_SHA: ${{ inputs.base-sha }}
         TARGET_SHA: ${{ inputs.target-sha }}
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
-        OPENAI_MODEL: ${{ inputs.openai-model }}
+        CURSOR_API_KEY: ${{ inputs.cursor-api-key }}
+        CURSOR_MODEL: ${{ inputs.cursor-model }}
         CHANGE_SERVICE: ${{ inputs.service }}
         CHANGE_ENVIRONMENT: ${{ inputs.environment }}
         CHANGE_TITLE: ${{ inputs.title }}
