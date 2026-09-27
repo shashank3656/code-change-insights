@@ -103,7 +103,7 @@ def main(argv=None):
             source.require_branch(target, os.environ.get("CHANGE_DEFAULT_BRANCH", "main"))
             records = load_release(source, store, base, target)
             payload = build_payload(store.repository, base, target, records,
-                service=required_env("CHANGE_SERVICE"), environment=required_env("CHANGE_ENVIRONMENT"),
+                service=required_env("CHANGE_SERVICE"), environment=os.environ.get("CHANGE_ENVIRONMENT", ""),
                 title=required_env("CHANGE_TITLE"), author=os.environ.get("GITHUB_ACTOR", ""),
                 pipeline_url=pipeline_url(), sbom_url=os.environ.get("SBOM_URL", ""),
                 attestation_url=os.environ.get("ATTESTATION_URL", ""), image_digest=os.environ.get("IMAGE_DIGEST", ""))

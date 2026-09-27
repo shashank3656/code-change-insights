@@ -88,8 +88,8 @@ Caller examples upload them to Actions artifacts for review.
 SetuOps receives its existing `/api/webhooks/change` contract: `repo`, `sha`,
 `previous_sha`, `service`, `environment`, `title`, `summary`, `risk_level`, `impact`,
 `backout_plan`, files, PR metadata, pipeline link, and optional supply-chain links.
-The payload requests `change_type: normal` and `status: new`; it does not start a
-post-deployment watch or bypass SetuOps's approval rules.
+The payload requests `change_type: standard` and a 120-minute post-change watch;
+it does not bypass SetuOps's approval rules.
 
 The existing SetuOps endpoint deduplicates by repository + SHA + environment and
 may preserve nonempty fields on an existing CHG. Reusing that identity is not a

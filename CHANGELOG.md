@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4
+
+- Align SetuOps submissions with the current webhook contract: standard changes and a 120-minute watch.
+- Allow environment to be omitted so SetuOps can resolve it from its service catalog.
+
 ## 1.1.3
 
 - Trust the action-created isolated workspace so Cursor can run non-interactively in CI.

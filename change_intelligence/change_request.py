@@ -72,8 +72,8 @@ def render_release(repository, base, target, records):
 
 def build_payload(repository, base, target, records, *, service, environment, title,
                   author="", pipeline_url="", sbom_url="", attestation_url="", image_digest=""):
-    if not service.strip() or not environment.strip() or not title.strip():
-        raise Failure("Service, environment, and Change Request title are required")
+    if not service.strip() or not title.strip():
+        raise Failure("Service and Change Request title are required")
     assessed_risk = risk_level(record["assessment"]["risk_level"] for record in records)
     summary = render_release(repository, base, target, records)
     prs = {pr["number"]: pr for r in records for pr in r.get("pull_requests", [])}
@@ -84,16 +84,18 @@ def build_payload(repository, base, target, records, *, service, environment, ti
     rollback = [item for r in records for item in r["assessment"]["rollback"]]
     payload = {
         "repo": repository, "sha": target, "previous_sha": base,
-        "service": service.strip(), "environment": environment.strip(), "title": title.strip(),
+        "service": service.strip(), "title": title.strip(),
         "author": author, "summary": summary,
         "files": sorted({path for r in records for path in r["files"]}),
         "pr_number": single_pr.get("number", 0), "pr_url": single_pr.get("url", ""),
-        "pipeline_url": pipeline_url, "change_type": "normal", "status": "new",
+        "pipeline_url": pipeline_url, "change_type": "standard", "watch_minutes": 120,
         "risk_level": "high" if assessed_risk == "unknown" else assessed_risk,
         "priority": "medium", "impact": "\n".join(factors + limitations),
         "backout_plan": "\n".join(rollback), "sbom_url": sbom_url,
         "attestation_url": attestation_url, "image_digest": image_digest,
     }
+    if environment.strip():
+        payload["environment"] = environment.strip()
     if len(json.dumps(payload).encode()) > 750_000:
         raise Failure("Release assessment is too large for a single Change Request; split the release")
     return payload
@@ -110,8 +112,8 @@ def endpoint_url(value):
 def submit(payload, api_url, secret):
     if not secret:
         raise Failure("Configure CHANGE_WEBHOOK_SECRET before submitting")
-    # The existing SetuOps endpoint deduplicates by repo + sha + environment.
-    identity = "\n".join(payload[key] for key in ("repo", "sha", "environment"))
+    # SetuOps resolves an omitted environment from its service catalog.
+    identity = "\n".join((payload["repo"], payload["sha"], payload.get("environment", "")))
     response = request_json("POST", endpoint_url(api_url), {
         "X-CI-Secret": secret,
         "Idempotency-Key": hashlib.sha256(identity.encode()).hexdigest(),
