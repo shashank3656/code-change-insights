@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- Trust the action-created isolated workspace so Cursor can run non-interactively in CI.
+
 ## 1.1.2
 
 - Preserve redacted Cursor CLI error details in failed assessment records for actionable CI diagnostics.
