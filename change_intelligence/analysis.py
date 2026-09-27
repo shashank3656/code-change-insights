@@ -112,7 +112,16 @@ class Analyzer:
                 except subprocess.TimeoutExpired:
                     raise Failure("Cursor analysis timed out after 5 minutes") from None
             if completed.returncode:
-                raise Failure("Cursor analysis failed; verify CURSOR_API_KEY, CURSOR_MODEL, and account access")
+                detail = stderr_path.read_text(encoding="utf-8", errors="replace")[-2000:].strip()
+                if self.api_key:
+                    detail = detail.replace(self.api_key, "[REDACTED]")
+                detail = " ".join(detail.split())
+                message = "Cursor analysis failed"
+                if detail:
+                    message += f" (exit {completed.returncode}): {detail}"
+                else:
+                    message += "; verify CURSOR_API_KEY, CURSOR_MODEL, and account access"
+                raise Failure(message)
             if stdout_path.stat().st_size > 1_000_000:
                 raise Failure("Cursor analysis output exceeded the supported size")
             try:

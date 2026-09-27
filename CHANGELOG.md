@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Preserve redacted Cursor CLI error details in failed assessment records for actionable CI diagnostics.
+
 ## 1.1.1
 
 - Pass the analysis prompt as the Cursor CLI positional prompt argument in headless mode.

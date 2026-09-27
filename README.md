@@ -104,7 +104,7 @@ preparation exposes `risk-level`.
 
 ## Versions and configuration
 
-`v1.1.1` uses Cursor Agent CLI for analysis; `v1` is the current major-version entry point.
+`v1.1.2` uses Cursor Agent CLI for analysis; `v1` is the current major-version entry point.
 Use a full commit SHA in `uses:` when you want immutable version pinning. The
 exact action version supplies both the metadata and Python code; callers do not
 need a separately pinned toolkit checkout.
