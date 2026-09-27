@@ -1,0 +1,81 @@
+# Copy to .github/workflows/create-change-request.yml in each application repo.
+name: Prepare or submit SetuOps Change Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: Full SHA currently deployed in the target environment
+        required: true
+        type: string
+      target_sha:
+        description: Full SHA of the release to deploy
+        required: true
+        type: string
+      service:
+        description: SetuOps service catalog name
+        required: true
+        type: string
+      environment:
+        description: Target environment in SetuOps (dev, uat, prod)
+        required: true
+        type: string
+      title:
+        description: Change Request title
+        required: true
+        type: string
+      submit:
+        description: Send the prepared Change Request to SetuOps
+        type: boolean
+        default: false
+      sbom_url:
+        description: Optional SBOM link
+        type: string
+      attestation_url:
+        description: Optional attestation link
+        type: string
+      image_digest:
+        description: Optional immutable image digest
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: insights-request-${{ github.repository }}-${{ inputs.target_sha }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  change-request:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shashank3656/code-change-insights@v1
+        id: insights
+        with:
+          operation: change-request
+          base-sha: ${{ inputs.base_sha }}
+          target-sha: ${{ inputs.target_sha }}
+          service: ${{ inputs.service }}
+          environment: ${{ inputs.environment }}
+          title: ${{ inputs.title }}
+          submit: ${{ inputs.submit }}
+          setuops-api-url: ${{ vars.SETUOPS_API_URL }}
+          change-webhook-secret: ${{ secrets.CHANGE_WEBHOOK_SECRET }}
+          sbom-url: ${{ inputs.sbom_url }}
+          attestation-url: ${{ inputs.attestation_url }}
+          image-digest: ${{ inputs.image_digest }}
+      - name: Keep Change Request evidence
+        if: always() && steps.insights.outputs.artifact-directory != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: change-request-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.insights.outputs.artifact-directory }}
+          if-no-files-found: ignore
+          retention-days: 90

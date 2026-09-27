@@ -1,0 +1,90 @@
+name: Code Change Insights
+description: Analyze merged code, persist per-repository assessments, and reuse them in SetuOps Change Requests.
+branding:
+  icon: git-pull-request
+  color: blue
+
+inputs:
+  operation:
+    description: ingest or change-request
+    required: true
+  github-token:
+    description: Caller repository token; contents write and pull-requests read for ingestion
+    default: ${{ github.token }}
+  source-directory:
+    description: Checked-out caller repository directory, relative to github.workspace
+    default: .
+  default-branch:
+    description: Branch whose merged changes are analyzed
+    default: main
+  base-sha:
+    description: Full previous SHA; inferred from the push event for ingestion
+  target-sha:
+    description: Full target SHA; inferred from the push event for ingestion
+  openai-api-key:
+    description: Required for new ingestion assessments; not used for Change Requests
+  openai-model:
+    description: Model supporting Responses API structured outputs
+  service:
+    description: SetuOps service name; required for Change Requests
+  environment:
+    description: Deployment environment; required for Change Requests
+  title:
+    description: Change Request title
+  submit:
+    description: Set true to send the prepared request; false produces a preview only
+    default: 'false'
+  setuops-api-url:
+    description: SetuOps HTTPS origin or complete /api/webhooks/change endpoint
+  change-webhook-secret:
+    description: SetuOps webhook secret; needed only when submit is true
+  sbom-url:
+    description: Optional SBOM URL
+  attestation-url:
+    description: Optional attestation URL
+  image-digest:
+    description: Optional immutable container image digest
+
+outputs:
+  artifact-directory:
+    description: Generated reports directory; upload this with actions/upload-artifact
+    value: ${{ steps.run.outputs.artifact-directory }}
+  assessment-count:
+    description: Number of commit assessments ingested or reused
+    value: ${{ steps.run.outputs.assessment-count }}
+  risk-level:
+    description: Prepared SetuOps risk (low, medium, high); unknown is conservatively mapped to high
+    value: ${{ steps.run.outputs.risk-level }}
+  change-number:
+    description: Created or updated SetuOps Change Request number, when submitted
+    value: ${{ steps.run.outputs.change-number }}
+  change-id:
+    description: Created or updated SetuOps Change Request ID, when submitted
+    value: ${{ steps.run.outputs.change-id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Run Code Change Insights
+      id: run
+      shell: bash
+      env:
+        INSIGHTS_ACTION_PATH: ${{ github.action_path }}
+        INSIGHTS_OPERATION: ${{ inputs.operation }}
+        INSIGHTS_SOURCE_DIRECTORY: ${{ inputs.source-directory }}
+        INSIGHTS_SUBMIT: ${{ inputs.submit }}
+        CHANGE_DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        BASE_SHA: ${{ inputs.base-sha }}
+        TARGET_SHA: ${{ inputs.target-sha }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        OPENAI_MODEL: ${{ inputs.openai-model }}
+        CHANGE_SERVICE: ${{ inputs.service }}
+        CHANGE_ENVIRONMENT: ${{ inputs.environment }}
+        CHANGE_TITLE: ${{ inputs.title }}
+        SETUOPS_API_URL: ${{ inputs.setuops-api-url }}
+        CHANGE_WEBHOOK_SECRET: ${{ inputs.change-webhook-secret }}
+        SBOM_URL: ${{ inputs.sbom-url }}
+        ATTESTATION_URL: ${{ inputs.attestation-url }}
+        IMAGE_DIGEST: ${{ inputs.image-digest }}
+      run: python3 -I "$INSIGHTS_ACTION_PATH/scripts/run_action.py"
