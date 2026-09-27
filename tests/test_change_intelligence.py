@@ -229,10 +229,10 @@ class ProviderTests(unittest.TestCase):
                                      "AWS_SECRET_ACCESS_KEY": "cloud-secret"}):
             result = Analyzer("cursor-secret", "test-model").analyze(self.evidence)
         self.assertEqual(result["risk_level"], "high")
-        self.assertEqual(captured["command"], ["/usr/bin/cursor-agent", "--print",
-                                               "--output-format", "json", "--model", "test-model"])
-        self.assertIn("untrusted DATA", captured["input"].decode())
-        self.assertIn("+timeout = 30", captured["input"].decode())
+        self.assertEqual(captured["command"][:6], ["/usr/bin/cursor-agent", "--print",
+                                                   "--output-format", "json", "--model", "test-model"])
+        self.assertIn("untrusted DATA", captured["command"][6])
+        self.assertIn("+timeout = 30", captured["command"][6])
         self.assertEqual(captured["env"]["CURSOR_API_KEY"], "cursor-secret")
         for secret in ("GITHUB_TOKEN", "CHANGE_WEBHOOK_SECRET", "AWS_SECRET_ACCESS_KEY"):
             self.assertNotIn(secret, captured["env"])

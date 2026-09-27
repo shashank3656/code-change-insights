@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Pass the analysis prompt as the Cursor CLI positional prompt argument in headless mode.
+
 ## 1.1.0
 
 - Switched change analysis from the OpenAI Responses API to Cursor Agent CLI.

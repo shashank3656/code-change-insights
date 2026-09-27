@@ -105,8 +105,8 @@ class Analyzer:
             with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
                 try:
                     completed = subprocess.run(
-                        [executable, "--print", "--output-format", "json", "--model", self.model],
-                        input=prompt.encode(), stdout=stdout, stderr=stderr, cwd=directory,
+                        [executable, "--print", "--output-format", "json", "--model", self.model, prompt],
+                        stdout=stdout, stderr=stderr, cwd=directory,
                         env=environment, timeout=300, check=False,
                     )
                 except subprocess.TimeoutExpired:
