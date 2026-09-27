@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.6
+
+- Send a bounded AI summary and overall risk to SetuOps while retaining the full assessment report in artifacts.
+
 ## 1.1.5
 
 - Submit only fields from the current SetuOps CI webhook contract while retaining the complete AI assessment in workflow artifacts.

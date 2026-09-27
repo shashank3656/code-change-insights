@@ -102,6 +102,8 @@ class GitTests(unittest.TestCase):
         self.assertNotIn("status", payload)
         self.assertEqual(payload["change_type"], "standard")
         self.assertEqual(payload["watch_minutes"], 120)
+        self.assertIn("Overall assessed risk: MEDIUM", payload["setuops_summary"])
+        self.assertLessEqual(len(payload["setuops_summary"]), 1800)
         self.assertEqual(payload["pr_number"], 7)
         self.assertIn(first[:12], payload["summary"])
         self.assertIn(target[:12], payload["summary"])
@@ -349,6 +351,7 @@ class DeliveryTests(unittest.TestCase):
             "repo", "sha", "service", "title", "summary", "author", "pipeline_url",
             "change_type", "watch_minutes",
         })
+        self.assertEqual(call.call_args.args[3]["summary"], self.payload()["setuops_summary"])
         self.assertEqual(call.call_args.kwargs["attempts"], 1)
 
     @patch("change_intelligence.change_request.request_json")

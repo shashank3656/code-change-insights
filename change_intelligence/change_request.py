@@ -76,6 +76,10 @@ def build_payload(repository, base, target, records, *, service, environment, ti
         raise Failure("Service and Change Request title are required")
     assessed_risk = risk_level(record["assessment"]["risk_level"] for record in records)
     summary = render_release(repository, base, target, records)
+    concise = " ".join(record["assessment"]["summary"].strip() for record in records)
+    setuops_summary = f"{concise} Overall assessed risk: {assessed_risk.upper()}."
+    if len(setuops_summary) > 1800:
+        setuops_summary = setuops_summary[:1797].rstrip() + "..."
     prs = {pr["number"]: pr for r in records for pr in r.get("pull_requests", [])}
     single_pr = next(iter(prs.values())) if len(prs) == 1 else {}
     factors = [f"[{f['level']}] {f['reason']} ({', '.join(f['files'])})"
@@ -85,7 +89,7 @@ def build_payload(repository, base, target, records, *, service, environment, ti
     payload = {
         "repo": repository, "sha": target, "previous_sha": base,
         "service": service.strip(), "title": title.strip(),
-        "author": author, "summary": summary,
+        "author": author, "summary": summary, "setuops_summary": setuops_summary,
         "files": sorted({path for r in records for path in r["files"]}),
         "pr_number": single_pr.get("number", 0), "pr_url": single_pr.get("url", ""),
         "pipeline_url": pipeline_url, "change_type": "standard", "watch_minutes": 120,
@@ -114,9 +118,10 @@ def submit(payload, api_url, secret):
         raise Failure("Configure CHANGE_WEBHOOK_SECRET before submitting")
     # Keep the artifact rich, but send only the current SetuOps webhook contract.
     delivery = {key: payload[key] for key in (
-        "repo", "sha", "service", "title", "summary", "author", "pipeline_url",
+        "repo", "sha", "service", "title", "author", "pipeline_url",
         "change_type", "watch_minutes",
     )}
+    delivery["summary"] = payload["setuops_summary"]
     for key in ("sbom_url", "attestation_url", "image_digest"):
         if payload.get(key):
             delivery[key] = payload[key]
