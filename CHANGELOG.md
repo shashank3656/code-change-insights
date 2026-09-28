@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.7
+
+- Create the SetuOps record with the current deploy-started contract and `implementing` status.
+- Send calculated AI risk, priority, PR metadata, previous SHA, and optional supply-chain fields.
+
 ## 1.1.6
 
 - Send a bounded AI summary and overall risk to SetuOps while retaining the full assessment report in artifacts.

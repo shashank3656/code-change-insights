@@ -99,7 +99,7 @@ class GitTests(unittest.TestCase):
                                 service="app", environment="prod", title="Release 1")
         self.assertEqual(payload["previous_sha"], self.base)
         self.assertEqual(payload["sha"], target)
-        self.assertNotIn("status", payload)
+        self.assertEqual(payload["status"], "implementing")
         self.assertEqual(payload["change_type"], "standard")
         self.assertEqual(payload["watch_minutes"], 120)
         self.assertIn("Overall assessed risk: MEDIUM", payload["setuops_summary"])
@@ -348,8 +348,9 @@ class DeliveryTests(unittest.TestCase):
         self.assertEqual(call.call_args.args[1], "https://setuops.example/api/webhooks/change")
         self.assertEqual(call.call_args.args[2]["X-CI-Secret"], "fake-secret")
         self.assertEqual(set(call.call_args.args[3]), {
-            "repo", "sha", "service", "title", "summary", "author", "pipeline_url",
-            "change_type", "watch_minutes",
+            "repo", "sha", "previous_sha", "service", "title", "summary", "author",
+            "pr_number", "pr_url", "pipeline_url", "change_type", "status", "priority",
+            "risk_level", "watch_minutes", "sbom_url", "attestation_url", "image_digest",
         })
         self.assertEqual(call.call_args.args[3]["summary"], self.payload()["setuops_summary"])
         self.assertEqual(call.call_args.kwargs["attempts"], 1)

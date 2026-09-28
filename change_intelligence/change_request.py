@@ -92,7 +92,8 @@ def build_payload(repository, base, target, records, *, service, environment, ti
         "author": author, "summary": summary, "setuops_summary": setuops_summary,
         "files": sorted({path for r in records for path in r["files"]}),
         "pr_number": single_pr.get("number", 0), "pr_url": single_pr.get("url", ""),
-        "pipeline_url": pipeline_url, "change_type": "standard", "watch_minutes": 120,
+        "pipeline_url": pipeline_url, "change_type": "standard", "status": "implementing",
+        "watch_minutes": 120,
         "risk_level": "high" if assessed_risk == "unknown" else assessed_risk,
         "priority": "medium", "impact": "\n".join(factors + limitations),
         "backout_plan": "\n".join(rollback), "sbom_url": sbom_url,
@@ -116,15 +117,16 @@ def endpoint_url(value):
 def submit(payload, api_url, secret):
     if not secret:
         raise Failure("Configure CHANGE_WEBHOOK_SECRET before submitting")
-    # Keep the artifact rich, but send only the current SetuOps webhook contract.
+    # Send the current SetuOps deploy-started contract. Later deployment steps
+    # update this same repo + sha + service identity to implemented or failed.
     delivery = {key: payload[key] for key in (
-        "repo", "sha", "service", "title", "author", "pipeline_url",
-        "change_type", "watch_minutes",
+        "repo", "sha", "previous_sha", "service", "title", "author", "pr_number",
+        "pr_url", "pipeline_url", "change_type", "status", "priority", "risk_level",
+        "watch_minutes",
     )}
     delivery["summary"] = payload["setuops_summary"]
     for key in ("sbom_url", "attestation_url", "image_digest"):
-        if payload.get(key):
-            delivery[key] = payload[key]
+        delivery[key] = payload.get(key, "")
     identity = "\n".join((payload["repo"], payload["sha"]))
     response = request_json("POST", endpoint_url(api_url), {
         "X-CI-Secret": secret,
